@@ -2563,6 +2563,7 @@ func reducedict(name string) error {
 	if _, err = cw.Write(numBuf[:8]); err != nil {
 		return err
 	}
+
 	// Thirdly, output pattern cutoff offset
 	binary.BigEndian.PutUint64(numBuf, positionCutoff)
 	if _, err = cw.Write(numBuf[:8]); err != nil {

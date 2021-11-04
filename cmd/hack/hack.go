@@ -2733,10 +2733,9 @@ func recsplitLookup(chaindata, name string) error {
 	idx := recsplit.MustOpen(name + ".idx")
 	defer idx.Close()
 
-	var word, word2 = make([]byte, 0, 4096), make([]byte, 0, 4096)
+	var word = make([]byte, 0, 4096)
 	wc := 0
 	g := d.MakeGetter()
-	dataGetter := d.MakeGetter()
 
 	parseCtx := txpool.NewTxParseContext(*chainID)
 	parseCtx.WithSender(false)
@@ -2744,8 +2743,7 @@ func recsplitLookup(chaindata, name string) error {
 	var sender [20]byte
 	var l1, l2, total time.Duration
 	start := time.Now()
-	var prev []byte
-	var prevOffset uint64
+	var hashes [][]byte
 	for g.HasNext() {
 		word, _ = g.Next(word[:0])
 		if _, err := parseCtx.ParseTransaction(word[1:], 0, &slot, sender[:]); err != nil {
@@ -2753,27 +2751,29 @@ func recsplitLookup(chaindata, name string) error {
 		}
 		wc++
 
+		hashes = append(hashes, common.CopyBytes(slot.IdHash[:]))
+		if wc > 20_000_000 {
+			break
+		}
+		select {
+		default:
+		case <-logEvery.C:
+			var m runtime.MemStats
+			runtime.ReadMemStats(&m)
+			log.Info("Checked", "millions", float64(wc)/1_000_000,
+				"alloc", common.StorageSize(m.Alloc), "sys", common.StorageSize(m.Sys),
+			)
+		}
+	}
+	log.Info("Started lookup")
+
+	for _, h := range hashes {
 		t := time.Now()
-		recID := idx.Lookup(slot.IdHash[:])
+		recID := idx.Lookup(h)
 		l1 += time.Since(t)
 		t = time.Now()
-		offset := idx.Lookup2(recID)
+		_ = idx.Lookup2(recID)
 		l2 += time.Since(t)
-		if ASSERT {
-			var dataP uint64
-			if prev != nil {
-				dataGetter.Reset(prevOffset)
-				word2, dataP = dataGetter.Next(word2[:0])
-				if !bytes.Equal(word, word2) {
-					fmt.Printf("wc=%d, %d,%d\n", wc, offset, dataP-uint64(len(word2)))
-					fmt.Printf("word: %x,%x\n\n", word, word2)
-					panic(fmt.Errorf("getter returned wrong data. IdHash=%x, offset=%x", slot.IdHash[:], offset))
-				}
-			}
-			prev = common.CopyBytes(word)
-			prevOffset = offset
-		}
-
 		select {
 		default:
 		case <-logEvery.C:

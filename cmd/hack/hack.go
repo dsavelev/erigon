@@ -2752,7 +2752,7 @@ func recsplitLookup(chaindata, name string) error {
 		wc++
 
 		hashes = append(hashes, common.CopyBytes(slot.IdHash[:]))
-		if wc > 20_000_000 {
+		if wc > 25_000_000 {
 			break
 		}
 		select {
@@ -2768,22 +2768,8 @@ func recsplitLookup(chaindata, name string) error {
 	log.Info("Started lookup")
 
 	for _, h := range hashes {
-		t := time.Now()
 		recID := idx.Lookup(h)
-		l1 += time.Since(t)
-		t = time.Now()
 		_ = idx.Lookup2(recID)
-		l2 += time.Since(t)
-		select {
-		default:
-		case <-logEvery.C:
-			var m runtime.MemStats
-			runtime.ReadMemStats(&m)
-			log.Info("Checked", "millions", float64(wc)/1_000_000,
-				"lookup", time.Duration(int64(l1)/int64(wc)), "lookup2", time.Duration(int64(l2)/int64(wc)),
-				"alloc", common.StorageSize(m.Alloc), "sys", common.StorageSize(m.Sys),
-			)
-		}
 	}
 
 	total = time.Since(start)

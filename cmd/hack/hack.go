@@ -2758,12 +2758,17 @@ func recsplitLookupLoop(chaindata, name string) error {
 		idxs = append(idxs, recsplit.MustOpen(name+".idx"))
 	}
 
-	hash := common.Hash{}
-	key := hash[:]
+	var hashes [][]byte
+	for i := uint64(0); i < 1000; i++ {
+		key := make([]byte, 32)
+		binary.BigEndian.PutUint64(key, i)
+	}
+
 	buf := make([]byte, 10_000)
 	defer func(t time.Time) { fmt.Printf("hack.go:2759: %s\n", time.Since(t)) }(time.Now())
 
 	for i := 0; i < 1000; i++ {
+		key := hashes[i]
 		for j := len(decompressors) - 1; j >= 0; j-- {
 			id := idxs[j].Lookup(key)
 			offset := idxs[j].Lookup2(id)

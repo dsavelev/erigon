@@ -2763,13 +2763,15 @@ func recsplitLookupLoop(chaindata, name string) error {
 	buf := make([]byte, 10_000)
 	defer func(t time.Time) { fmt.Printf("hack.go:2759: %s\n", time.Since(t)) }(time.Now())
 
-	for j := len(decompressors) - 1; j >= 0; j-- {
-		id := idxs[j].Lookup(key)
-		offset := idxs[j].Lookup2(id)
-		decompressors[j].Reset(offset)
-		buf, _ = decompressors[j].Next(buf)
-		if buf[0] == key[0] {
-			_ = true
+	for i := 0; i < 1000; i++ {
+		for j := len(decompressors) - 1; j >= 0; j-- {
+			id := idxs[j].Lookup(key)
+			offset := idxs[j].Lookup2(id)
+			decompressors[j].Reset(offset)
+			buf, _ = decompressors[j].Next(buf)
+			if buf[0] == key[0] {
+				_ = true
+			}
 		}
 	}
 	return nil

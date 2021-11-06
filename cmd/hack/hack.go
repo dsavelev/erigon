@@ -2762,6 +2762,7 @@ func recsplitLookupLoop(chaindata, name string) error {
 	for i := uint64(0); i < 1000; i++ {
 		key := make([]byte, 32)
 		binary.BigEndian.PutUint64(key, i)
+		hashes[i] = key
 	}
 
 	buf := make([]byte, 10_000)

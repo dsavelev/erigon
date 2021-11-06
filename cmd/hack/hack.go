@@ -2747,7 +2747,7 @@ func recsplitLookupLoop(chaindata, name string) error {
 	var idxs []*recsplit.Index
 	blocksPerFile := 500_000
 	blockTotal = &blocksPerFile
-	for i := 0; i < 13_000_000; i += *blockTotal {
+	for i := 0; i < 12_500_000; i += *blockTotal {
 		name := fmt.Sprintf("bodies%d-%dm", i/1_000_000, i%1_000_000/100_000)
 		log.Info("Creating", "file", name)
 		d, err := compress.NewDecompressor(name + ".compressed.dat")

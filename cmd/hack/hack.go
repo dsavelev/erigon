@@ -2735,6 +2735,42 @@ func recsplitWholeChain(chaindata string) error {
 	return nil
 }
 
+func recsplitLookupLoop(chaindata, name string) error {
+	//database := mdbx.MustOpen(chaindata)
+	//defer database.Close()
+	//chainConfig := tool.ChainConfigFromDB(database)
+	//chainID, _ := uint256.FromBig(chainConfig.ChainID)
+	logEvery := time.NewTicker(20 * time.Second)
+	defer logEvery.Stop()
+
+	var decompressors []*compress.Getter
+	var idxs []*recsplit.Index
+	blocksPerFile := 500_000
+	blockTotal = &blocksPerFile
+	for i := 0; i < 13_000_000; i += *blockTotal {
+		name := fmt.Sprintf("bodies%d-%dm", i/1_000_000, i%1_000_000/100_000)
+		log.Info("Creating", "file", name)
+		d, err := compress.NewDecompressor(name + ".compressed.dat")
+		if err != nil {
+			return err
+		}
+		decompressors = append(decompressors, d.MakeGetter())
+		idxs = append(idxs, recsplit.MustOpen(name+".idx"))
+	}
+
+	hash := common.Hash{}
+	key := hash[:]
+	buf := make([]byte, 10_000)
+	defer func(t time.Time) { fmt.Printf("hack.go:2759: %s\n", time.Since(t)) }(time.Now())
+
+	for j := len(decompressors) - 1; j >= 0; j-- {
+		id := idxs[j].Lookup(key)
+		offset := idxs[j].Lookup2(id)
+		decompressors[j].Reset(offset)
+		decompressors[j].Next(buf)
+	}
+	return nil
+}
 func recsplitLookup(chaindata, name string) error {
 	database := mdbx.MustOpen(chaindata)
 	defer database.Close()
@@ -4267,6 +4303,8 @@ func main() {
 		err = recsplitWholeChain(*chaindata)
 	case "recsplitLookup":
 		err = recsplitLookup(*chaindata, *name)
+	case "recsplitLookupLoop":
+		err = recsplitLookupLoop(*chaindata, *name)
 	case "decompress":
 		err = decompress(*name)
 	case "genstate":

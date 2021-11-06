@@ -2758,7 +2758,7 @@ func recsplitLookupLoop(chaindata, name string) error {
 		idxs = append(idxs, recsplit.MustOpen(name+".idx"))
 	}
 
-	var hashes [][]byte
+	var hashes [1000][]byte
 	for i := uint64(0); i < 1000; i++ {
 		key := make([]byte, 32)
 		binary.BigEndian.PutUint64(key, i)

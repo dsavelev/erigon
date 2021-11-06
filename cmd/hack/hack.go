@@ -2767,7 +2767,10 @@ func recsplitLookupLoop(chaindata, name string) error {
 		id := idxs[j].Lookup(key)
 		offset := idxs[j].Lookup2(id)
 		decompressors[j].Reset(offset)
-		decompressors[j].Next(buf)
+		buf, _ = decompressors[j].Next(buf)
+		if buf[0] == key[0] {
+			_ = true
+		}
 	}
 	return nil
 }

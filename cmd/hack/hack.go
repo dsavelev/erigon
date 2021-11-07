@@ -2811,7 +2811,7 @@ func recsplitLookupLoop(chaindata, name string) error {
 		key := hashes[i]
 		for j := len(decompressors) - 1; j >= 0; j-- {
 			tx.GetOne(kv.TxLookup, key)
-			tx.GetOne(kv.EthTx, key)
+			//tx.GetOne(kv.EthTx, key)
 			//id := idxs[j].Lookup(key)
 			//offset := idxs[j].Lookup2(id)
 			//decompressors[j].Reset(offset)

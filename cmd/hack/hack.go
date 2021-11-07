@@ -1680,13 +1680,14 @@ const superstringLimit = 16 * 1024 * 1024
 const minPatternLen = 5
 
 // minPatternScore is minimum score (per superstring) required to consider including pattern into the dictionary
-const minPatternScore = 1024
+const minPatternScore = 2 * 1024
 
 // maxDictPatterns is the maximum number of patterns allowed in the initial (not reduced dictionary)
 // Large values increase memory consumption of dictionary reduction phase
 const maxDictPatterns = 1024 * 1024
 
 func compress1(chaindata string, name string) error {
+	defer func(t time.Time) { fmt.Printf("time1:1690: %s\n", time.Since(t)) }(time.Now())
 	database := mdbx.MustOpen(chaindata)
 	defer database.Close()
 	chainConfig := tool.ChainConfigFromDB(database)
@@ -1713,7 +1714,7 @@ func compress1(chaindata string, name string) error {
 		collectors[i] = collector
 		go processSuperstring(ch, collector, &wg)
 	}
-	var buf []byte
+	buf := make([]byte, 64*4096)
 	l, e := binary.ReadUvarint(r)
 	i := 0
 	for ; e == nil; l, e = binary.ReadUvarint(r) {
@@ -1737,7 +1738,6 @@ func compress1(chaindata string, name string) error {
 		case <-logEvery.C:
 			log.Info("Dictionary preprocessing", "millions", i/1_000_000)
 		}
-
 	}
 	itemsCount := i
 	if e != nil && !errors.Is(e, io.EOF) {
@@ -1751,6 +1751,7 @@ func compress1(chaindata string, name string) error {
 	}
 	close(ch)
 	wg.Wait()
+	defer func(t time.Time) { fmt.Printf("time2:1764: %s\n", time.Since(t)) }(time.Now())
 	dictCollector := etl.NewCollector(CompressLogPrefix, tmpDir, etl.NewSortableBuffer(etl.BufferOptimalSize))
 	dictAggregator := &DictAggregator{collector: dictCollector}
 	for _, collector := range collectors {
@@ -1768,6 +1769,7 @@ func compress1(chaindata string, name string) error {
 	}
 	db.finish()
 	dictCollector.Close()
+	defer func(t time.Time) { fmt.Printf("time3:1782: %s\n", time.Since(t)) }(time.Now())
 	var df *os.File
 	df, err = os.Create(name + ".dictionary.txt")
 	if err != nil {
@@ -1785,9 +1787,11 @@ func compress1(chaindata string, name string) error {
 	}
 	df.Close()
 
+	defer func(t time.Time) { fmt.Printf("reduce:1800: %s\n", time.Since(t)) }(time.Now())
 	if err := reducedict(name); err != nil {
 		return err
 	}
+	defer func(t time.Time) { fmt.Printf("createIdx:1804: %s\n", time.Since(t)) }(time.Now())
 	if err := _createIdx(*chainID, name, itemsCount); err != nil {
 		return err
 	}
@@ -2285,6 +2289,7 @@ func (hf *HuffmanCoder) flush() error {
 
 // reduceDict reduces the dictionary by trying the substitutions and counting frequency for each word
 func reducedict(name string) error {
+	defer func(t time.Time) { fmt.Printf("reduce1:2292: %s\n", time.Since(t)) }(time.Now())
 	logEvery := time.NewTicker(20 * time.Second)
 	defer logEvery.Stop()
 	// Read up the dictionary
@@ -2371,6 +2376,7 @@ func reducedict(name string) error {
 	}
 	close(ch)
 	wg.Wait()
+	defer func(t time.Time) { fmt.Printf("reduce2:2379: %s\n", time.Since(t)) }(time.Now())
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	log.Info("Done", "input", common.StorageSize(atomic.LoadUint64(&inputSize)), "output", common.StorageSize(atomic.LoadUint64(&outputSize)), "alloc", common.StorageSize(m.Alloc), "sys", common.StorageSize(m.Sys))
@@ -2449,6 +2455,7 @@ func reducedict(name string) error {
 		huffs = append(huffs, h)
 	}
 	root := heap.Pop(&codeHeap).(*PatternHuff)
+	defer func(t time.Time) { fmt.Printf("reduce3:2458: %s\n", time.Since(t)) }(time.Now())
 	var cf *os.File
 	if cf, err = os.Create(name + ".compressed.dat"); err != nil {
 		return err
@@ -2624,7 +2631,7 @@ func reducedict(name string) error {
 		return err
 	}
 	df.Close()
-
+	defer func(t time.Time) { fmt.Printf("reduce4:2634: %s\n", time.Since(t)) }(time.Now())
 	aggregator := etl.NewCollector(CompressLogPrefix, tmpDir, etl.NewSortableBuffer(etl.BufferOptimalSize))
 	for _, collector := range collectors {
 		if err = collector.Load(nil, "", func(k, v []byte, table etl.CurrentTableReader, next etl.LoadNextFunc) error {
@@ -2773,6 +2780,9 @@ func recsplitLookup(chaindata, name string) error {
 	logEvery := time.NewTicker(20 * time.Second)
 	defer logEvery.Stop()
 
+	tx, _ := database.BeginRo(context.Background())
+	defer tx.Rollback()
+
 	d, err := compress.NewDecompressor(name + ".compressed.dat")
 	if err != nil {
 		return err
@@ -2791,7 +2801,7 @@ func recsplitLookup(chaindata, name string) error {
 	parseCtx.WithSender(false)
 	slot := txpool.TxSlot{}
 	var sender [20]byte
-	var l1, l2, total time.Duration
+	var l1, l2, l3, total time.Duration
 	start := time.Now()
 	var prev []byte
 	var prevOffset uint64
@@ -2801,13 +2811,18 @@ func recsplitLookup(chaindata, name string) error {
 			return err
 		}
 		wc++
+		key := slot.IdHash[:]
 
 		t := time.Now()
-		recID := idx.Lookup(slot.IdHash[:])
+		recID := idx.Lookup(key)
 		l1 += time.Since(t)
 		t = time.Now()
 		offset := idx.Lookup2(recID)
 		l2 += time.Since(t)
+		t = time.Now()
+		tx.GetOne(kv.EthTx, key)
+		l3 += time.Since(t)
+
 		if ASSERT {
 			var dataP uint64
 			if prev != nil {
@@ -2829,14 +2844,14 @@ func recsplitLookup(chaindata, name string) error {
 			var m runtime.MemStats
 			runtime.ReadMemStats(&m)
 			log.Info("Checked", "millions", float64(wc)/1_000_000,
-				"lookup", time.Duration(int64(l1)/int64(wc)), "lookup2", time.Duration(int64(l2)/int64(wc)),
+				"lookup", time.Duration(int64(l1)/int64(wc)), "lookup2", time.Duration(int64(l2)/int64(wc)), "lookupDB", time.Duration(int64(l3)/int64(wc)),
 				"alloc", common.StorageSize(m.Alloc), "sys", common.StorageSize(m.Sys),
 			)
 		}
 	}
 
 	total = time.Since(start)
-	log.Info("Average decoding time", "lookup", time.Duration(int64(l1)/int64(wc)), "lookup + lookup2", time.Duration(int64(l2)/int64(wc)), "items", wc, "total", total)
+	log.Info("Average decoding time", "lookup", time.Duration(int64(l1)/int64(wc)), "lookup2", time.Duration(int64(l2)/int64(wc)), "lookupDB", time.Duration(int64(l3)/int64(wc)), "items", wc, "total", total)
 	return nil
 }
 

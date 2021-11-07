@@ -2804,7 +2804,7 @@ func recsplitLookupLoop(chaindata, name string) error {
 		hashes[i] = key
 	}
 
-	buf := make([]byte, 10_000)
+	//buf := make([]byte, 10_000)
 	defer func(t time.Time) { fmt.Printf("hack.go:2759: %s\n", time.Since(t)) }(time.Now())
 
 	for i := 0; i < 1000; i++ {

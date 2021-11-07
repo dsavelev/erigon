@@ -2804,21 +2804,21 @@ func recsplitLookupLoop(chaindata, name string) error {
 		hashes[i] = key
 	}
 
-	//buf := make([]byte, 10_000)
+	buf := make([]byte, 10_000)
 	defer func(t time.Time) { fmt.Printf("hack.go:2759: %s\n", time.Since(t)) }(time.Now())
 
 	for i := 0; i < 1000; i++ {
 		key := hashes[i]
 		for j := len(decompressors) - 1; j >= 0; j-- {
-			tx.GetOne(kv.TxLookup, key)
+			//tx.GetOne(kv.TxLookup, key)
 			//tx.GetOne(kv.EthTx, key)
-			//id := idxs[j].Lookup(key)
-			//offset := idxs[j].Lookup2(id)
-			//decompressors[j].Reset(offset)
-			//buf, _ = decompressors[j].Next(buf)
-			//if buf[0] == key[0] {
-			//	_ = true
-			//}
+			id := idxs[j].Lookup(key)
+			offset := idxs[j].Lookup2(id)
+			decompressors[j].Reset(offset)
+			buf, _ = decompressors[j].Next(buf)
+			if buf[0] == key[0] {
+				_ = true
+			}
 		}
 	}
 	return nil

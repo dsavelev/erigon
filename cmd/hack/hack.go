@@ -2772,6 +2772,56 @@ func recsplitWholeChain(chaindata string) error {
 	return nil
 }
 
+func recsplitLookupLoop(chaindata, name string) error {
+	database := mdbx.MustOpen(chaindata)
+	defer database.Close()
+	//chainConfig := tool.ChainConfigFromDB(database)
+	//chainID, _ := uint256.FromBig(chainConfig.ChainID)
+	tx, _ := database.BeginRo(context.Background())
+	defer tx.Rollback()
+	logEvery := time.NewTicker(20 * time.Second)
+	defer logEvery.Stop()
+
+	var decompressors []*compress.Getter
+	var idxs []*recsplit.Index
+	blocksPerFile := 500_000
+	blockTotal = &blocksPerFile
+	for i := 0; i < 12_500_000; i += *blockTotal {
+		name := fmt.Sprintf("bodies%d-%dm", i/1_000_000, i%1_000_000/100_000)
+		log.Info("Creating", "file", name)
+		d, err := compress.NewDecompressor(name + ".compressed.dat")
+		if err != nil {
+			return err
+		}
+		decompressors = append(decompressors, d.MakeGetter())
+		idxs = append(idxs, recsplit.MustOpen(name+".idx"))
+	}
+
+	var hashes [1000][]byte
+	for i := uint64(0); i < 1000; i++ {
+		key := make([]byte, 32)
+		binary.BigEndian.PutUint64(key, i)
+		hashes[i] = key
+	}
+
+	buf := make([]byte, 10_000)
+	defer func(t time.Time) { fmt.Printf("hack.go:2759: %s\n", time.Since(t)) }(time.Now())
+
+	for i := 0; i < 1000; i++ {
+		key := hashes[i]
+		for j := len(decompressors) - 1; j >= 0; j-- {
+			tx.GetOne(kv.EthTx, key)
+			//id := idxs[j].Lookup(key)
+			//offset := idxs[j].Lookup2(id)
+			//decompressors[j].Reset(offset)
+			//buf, _ = decompressors[j].Next(buf)
+			//if buf[0] == key[0] {
+			//	_ = true
+			//}
+		}
+	}
+	return nil
+}
 func recsplitLookup(chaindata, name string) error {
 	database := mdbx.MustOpen(chaindata)
 	defer database.Close()
@@ -2779,9 +2829,6 @@ func recsplitLookup(chaindata, name string) error {
 	chainID, _ := uint256.FromBig(chainConfig.ChainID)
 	logEvery := time.NewTicker(20 * time.Second)
 	defer logEvery.Stop()
-
-	tx, _ := database.BeginRo(context.Background())
-	defer tx.Rollback()
 
 	d, err := compress.NewDecompressor(name + ".compressed.dat")
 	if err != nil {
@@ -2801,7 +2848,7 @@ func recsplitLookup(chaindata, name string) error {
 	parseCtx.WithSender(false)
 	slot := txpool.TxSlot{}
 	var sender [20]byte
-	var l1, l2, l3, total time.Duration
+	var l1, l2, total time.Duration
 	start := time.Now()
 	var prev []byte
 	var prevOffset uint64
@@ -2819,9 +2866,6 @@ func recsplitLookup(chaindata, name string) error {
 		t = time.Now()
 		offset := idx.Lookup2(recID)
 		l2 += time.Since(t)
-		t = time.Now()
-		tx.GetOne(kv.EthTx, key)
-		l3 += time.Since(t)
 
 		if ASSERT {
 			var dataP uint64
@@ -2844,14 +2888,14 @@ func recsplitLookup(chaindata, name string) error {
 			var m runtime.MemStats
 			runtime.ReadMemStats(&m)
 			log.Info("Checked", "millions", float64(wc)/1_000_000,
-				"lookup", time.Duration(int64(l1)/int64(wc)), "lookup2", time.Duration(int64(l2)/int64(wc)), "lookupDB", time.Duration(int64(l3)/int64(wc)),
+				"lookup", time.Duration(int64(l1)/int64(wc)), "lookup2", time.Duration(int64(l2)/int64(wc)),
 				"alloc", common.StorageSize(m.Alloc), "sys", common.StorageSize(m.Sys),
 			)
 		}
 	}
 
 	total = time.Since(start)
-	log.Info("Average decoding time", "lookup", time.Duration(int64(l1)/int64(wc)), "lookup2", time.Duration(int64(l2)/int64(wc)), "lookupDB", time.Duration(int64(l3)/int64(wc)), "items", wc, "total", total)
+	log.Info("Average decoding time", "lookup", time.Duration(int64(l1)/int64(wc)), "lookup2", time.Duration(int64(l2)/int64(wc)), "items", wc, "total", total)
 	return nil
 }
 
@@ -4314,6 +4358,8 @@ func main() {
 		err = recsplitWholeChain(*chaindata)
 	case "recsplitLookup":
 		err = recsplitLookup(*chaindata, *name)
+	case "recsplitLookupLoop":
+		err = recsplitLookupLoop(*chaindata, *name)
 	case "decompress":
 		err = decompress(*name)
 	case "genstate":

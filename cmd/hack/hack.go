@@ -2922,7 +2922,7 @@ RETRY:
 
 	if err = rs.Build(); err != nil {
 		if errors.Is(err, recsplit.ErrCollision) {
-			log.Info("Building recsplit. Collision happened. It's ok. Restarting...")
+			log.Info("Building recsplit. Collision happened. It's ok. Restarting...", "err", err)
 			rs.ResetNextSalt()
 			goto RETRY
 		}

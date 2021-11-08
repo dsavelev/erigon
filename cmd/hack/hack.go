@@ -1511,7 +1511,7 @@ func processSuperstring(superstringCh chan []byte, dictCollector *etl.Collector,
 				for s := 0; s < l; s++ {
 					dictKey[s] = superstring[(filtered[i]+s)*2+1]
 				}
-				fmt.Printf("%d %d %s\n", filtered[i], lcp[i], dictKey)
+				//fmt.Printf("%d %d %s\n", filtered[i], lcp[i], dictKey)
 			}
 		}
 		//log.Info("LCP array checked")

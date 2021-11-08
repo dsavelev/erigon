@@ -64,7 +64,7 @@ import (
 	"github.com/wcharczuk/go-chart/v2"
 )
 
-const ASSERT = true
+const ASSERT = false
 
 var (
 	verbosity  = flag.Uint("verbosity", 3, "Logging verbosity: 0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=detail (default 3)")
@@ -1492,6 +1492,7 @@ func processSuperstring(superstringCh chan []byte, dictCollector *etl.Collector,
 		}
 		//log.Info("Kasai algorithm finished")
 		// Checking LCP array
+
 		if ASSERT {
 			for i := 0; i < n-1; i++ {
 				var prefixLen int
@@ -1502,6 +1503,7 @@ func processSuperstring(superstringCh chan []byte, dictCollector *etl.Collector,
 				}
 				if prefixLen != int(lcp[i]) {
 					log.Error("Mismatch", "prefixLen", prefixLen, "lcp[i]", lcp[i])
+					break
 				}
 				l := int(lcp[i]) // Length of potential dictionary word
 				if l < 2 {

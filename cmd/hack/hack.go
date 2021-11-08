@@ -1311,7 +1311,7 @@ func mphf(chaindata string, block int) error {
 	if rs, err = recsplit.NewRecSplit(recsplit.RecSplitArgs{
 		KeyCount:   int(count),
 		BucketSize: 2000,
-		Salt:       0,
+		Salt:       1,
 		LeafSize:   8,
 		TmpDir:     "",
 		StartSeed: []uint64{0x106393c187cae21a, 0x6453cec3f7376937, 0x643e521ddbd2be98, 0x3740c6412f6572cb, 0x717d47562f1ce470, 0x4cd6eb4c63befb7c, 0x9bfd8c5e18c8da73,

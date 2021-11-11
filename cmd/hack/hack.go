@@ -2614,6 +2614,7 @@ func recsplitWholeChain(chaindata string) error {
 		if err != nil {
 			return 0, err
 		}
+		fmt.Printf("k: %x\n", k)
 		last := binary.BigEndian.Uint64(k)
 		if last > params.FullImmutabilityThreshold {
 			last -= params.FullImmutabilityThreshold

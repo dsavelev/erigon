@@ -2608,7 +2608,7 @@ func recsplitWholeChain(chaindata string) error {
 	lastChunk := func(tx kv.Tx, blocksPerFile uint64) (uint64, error) {
 
 		tx.ForEach(kv.BlockBody, dbutils.EncodeBlockNumber(13465951), func(k, v []byte) error {
-			fmt.Printf("k: %x\n", binary.BigEndian.Uint64(k))
+			fmt.Printf("k: %d\n", binary.BigEndian.Uint64(k))
 			return nil
 		})
 

@@ -2606,12 +2606,6 @@ func reducedict(name string) error {
 func recsplitWholeChain(chaindata string) error {
 	blocksPerFile := uint64(500_000)
 	lastChunk := func(tx kv.Tx, blocksPerFile uint64) (uint64, error) {
-
-		tx.ForEach(kv.BlockBody, dbutils.EncodeBlockNumber(13465951), func(k, v []byte) error {
-			fmt.Printf("k: %d\n", binary.BigEndian.Uint64(k))
-			return nil
-		})
-
 		c, err := tx.Cursor(kv.BlockBody)
 		if err != nil {
 			return 0, err

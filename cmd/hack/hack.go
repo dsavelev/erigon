@@ -2620,6 +2620,7 @@ func recsplitWholeChain(chaindata string) error {
 		} else {
 			last = 0
 		}
+		log.Info("Last body number", "last", last, "a", last%blocksPerFile)
 		last = last - last%blocksPerFile
 		return last, nil
 	}
@@ -2636,7 +2637,6 @@ func recsplitWholeChain(chaindata string) error {
 	}
 	database.Close()
 
-	log.Info("Last body number", "last", last)
 	for i := uint64(*block); i < last; i += blocksPerFile {
 		*name = fmt.Sprintf("bodies%d-%dm", i/1_000_000, i%1_000_000/100_000)
 		log.Info("Creating", "file", *name)

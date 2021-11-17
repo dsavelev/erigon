@@ -180,6 +180,9 @@ func (hd *HeaderDownload) extendUp(segment *ChainSegment, start, end int) error 
 	prevLink := attachmentLink
 	for i := end - 1; i >= start; i-- {
 		link := hd.addHeaderAsLink(segment.Headers[i], false /* persisted */)
+		if link.blockHeight != prevLink.blockHeight+1 {
+			log.Error("misaligned next 1", "link.blockHeight", link.blockHeight, "prevLink.blockHeight", prevLink.blockHeight)
+		}
 		prevLink.next = append(prevLink.next, link)
 		prevLink = link
 		if _, ok := hd.preverifiedHashes[link.hash]; ok {
@@ -234,11 +237,19 @@ func (hd *HeaderDownload) extendDown(segment *ChainSegment, start, end int) (boo
 			if prevLink == nil {
 				newAnchor.links = append(newAnchor.links, link)
 			} else {
+				if link.blockHeight != prevLink.blockHeight+1 {
+					log.Error("misaligned next 2", "link.blockHeight", link.blockHeight, "prevLink.blockHeight", prevLink.blockHeight)
+				}
 				prevLink.next = append(prevLink.next, link)
 			}
 			prevLink = link
 			if _, ok := hd.preverifiedHashes[link.hash]; ok {
 				hd.markPreverified(link)
+			}
+		}
+		for _, link := range anchor.links {
+			if link.blockHeight != prevLink.blockHeight+1 {
+				log.Error("misaligned next 3", "link.blockHeight", link.blockHeight, "prevLink.blockHeight", prevLink.blockHeight)
 			}
 		}
 		prevLink.next = anchor.links
@@ -284,10 +295,18 @@ func (hd *HeaderDownload) connect(segment *ChainSegment, start, end int) ([]Pena
 	prevLink := attachmentLink
 	for i := end - 1; i >= start; i-- {
 		link := hd.addHeaderAsLink(segment.Headers[i], false /* persisted */)
+		if link.blockHeight != prevLink.blockHeight+1 {
+			log.Error("misaligned next 4", "link.blockHeight", link.blockHeight, "prevLink.blockHeight", prevLink.blockHeight)
+		}
 		prevLink.next = append(prevLink.next, link)
 		prevLink = link
 		if _, ok := hd.preverifiedHashes[link.hash]; ok {
 			hd.markPreverified(link)
+		}
+	}
+	for _, link := range anchor.links {
+		if link.blockHeight != prevLink.blockHeight+1 {
+			log.Error("misaligned next 5", "link.blockHeight", link.blockHeight, "prevLink.blockHeight", prevLink.blockHeight)
 		}
 	}
 	prevLink.next = anchor.links
@@ -351,6 +370,11 @@ func (hd *HeaderDownload) newAnchor(segment *ChainSegment, start, end int, peerI
 		if prevLink == nil {
 			anchor.links = append(anchor.links, link)
 		} else {
+			for _, link := range anchor.links {
+				if link.blockHeight != prevLink.blockHeight+1 {
+					log.Error("misaligned next 6", "link.blockHeight", link.blockHeight, "prevLink.blockHeight", prevLink.blockHeight)
+				}
+			}
 			prevLink.next = append(prevLink.next, link)
 		}
 		prevLink = link
@@ -616,7 +640,7 @@ func (hd *HeaderDownload) InsertHeaders(hf func(header *types.Header, hash commo
 			if hd.diagnostics {
 				log.Info("Header not yet preverified", "height", link.blockHeight, "insertList", len(hd.insertList))
 				for i, n := range link.next {
-					log.Info("next", "i", i, "height", n.blockHeight, n.preverified)
+					log.Info("next", "i", i, "height", n.blockHeight, "preverified", n.preverified)
 				}
 				var ls []*Link = link.next
 				var sb strings.Builder

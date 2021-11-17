@@ -586,6 +586,9 @@ func (hd *HeaderDownload) RequestSkeleton() *HeaderRequest {
 	if length > 192 {
 		length = 192
 	}
+	if hd.diagnostics {
+		log.Info("Diagnostics: sent skeleton request", "maxHeight", maxHeight, "nextHeight", nextHeight, "length", length, "total anchors", len(hd.anchors), "top seen height", hd.topSeenHeight, "highestInDb", hd.highestInDb)
+	}
 	return &HeaderRequest{Number: nextHeight, Length: length, Skip: stride - 1, Reverse: false}
 }
 
@@ -595,6 +598,11 @@ func (hd *HeaderDownload) InsertHeaders(hf func(header *types.Header, hash commo
 	hd.lock.Lock()
 	defer hd.lock.Unlock()
 	var linksInFuture []*Link // Here we accumulate links that fail validation as "in the future"
+	if hd.diagnostics {
+		if len(hd.insertList) == 0 {
+			log.Info("insertList is empty")
+		}
+	}
 	for len(hd.insertList) > 0 {
 		// Make sure long insertions do not appear as a stuck stage 1
 		select {
@@ -605,6 +613,9 @@ func (hd *HeaderDownload) InsertHeaders(hf func(header *types.Header, hash commo
 		link := hd.insertList[len(hd.insertList)-1]
 		if link.blockHeight <= hd.preverifiedHeight && !link.preverified {
 			// Header should be preverified, but not yet, try again later
+			if hd.diagnostics {
+				log.Info("Header not yet preverified", "height", link.blockHeight, "insertList", len(hd.insertList))
+			}
 			break
 		}
 		hd.insertList = hd.insertList[:len(hd.insertList)-1]
@@ -632,6 +643,9 @@ func (hd *HeaderDownload) InsertHeaders(hf func(header *types.Header, hash commo
 			heap.Remove(hd.linkQueue, link.idx)
 		}
 		if skip {
+			if hd.diagnostics {
+				log.Info("Header skipped", "height", link.blockHeight, "insertList", len(hd.insertList))
+			}
 			delete(hd.links, link.hash)
 			continue
 		}
@@ -1046,4 +1060,10 @@ func DecodeTips(encodings []string) (map[common.Hash]HeaderRecord, error) {
 	}
 
 	return hardTips, nil
+}
+
+func (hd *HeaderDownload) SetDiagnostics(diagnostics bool) {
+	hd.lock.Lock()
+	defer hd.lock.Unlock()
+	hd.diagnostics = diagnostics
 }

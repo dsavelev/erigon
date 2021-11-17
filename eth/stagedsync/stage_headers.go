@@ -119,6 +119,7 @@ func HeadersForward(
 	var peer []byte
 	stopped := false
 	prevProgress := headerProgress
+	noProgressCount := 0 // How many time the progress was printed without actual progress
 Loop:
 	for !stopped {
 		currentTime := uint64(time.Now().Unix())
@@ -181,6 +182,14 @@ Loop:
 			stopped = true
 		case <-logEvery.C:
 			progress := cfg.hd.Progress()
+			if prevProgress == progress {
+				// Start diagnostics
+				cfg.hd.SetDiagnostics(true)
+				noProgressCount++
+			} else {
+				noProgressCount = 0 // Reset, there was progress
+				cfg.hd.SetDiagnostics(false)
+			}
 			logProgressHeaders(logPrefix, prevProgress, progress)
 			prevProgress = progress
 		case <-timer.C:
@@ -209,6 +218,7 @@ Loop:
 	}
 	// We do not print the following line if the stage was interrupted
 	log.Info(fmt.Sprintf("[%s] Processed", logPrefix), "highest inserted", headerInserter.GetHighest(), "age", common.PrettyAge(time.Unix(int64(headerInserter.GetHighestTimestamp()), 0)))
+	cfg.hd.SetDiagnostics(false)
 	return nil
 }
 

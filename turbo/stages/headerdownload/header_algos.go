@@ -947,10 +947,15 @@ func (hd *HeaderDownload) ProcessSegment(segment *ChainSegment, newBlock bool, p
 	//log.Info(hd.anchorState())
 	log.Trace("Link queue", "size", hd.linkQueue.Len())
 	if hd.linkQueue.Len() > hd.linkLimit {
-		log.Trace("Too many links, cutting down", "count", hd.linkQueue.Len(), "tried to add", end-start, "limit", hd.linkLimit)
+		if hd.diagnostics {
+			log.Info("Too many links, cutting down", "count", hd.linkQueue.Len(), "tried to add", end-start, "limit", hd.linkLimit)
+		}
 	}
 	for hd.linkQueue.Len() > hd.linkLimit {
 		link := heap.Pop(hd.linkQueue).(*Link)
+		if hd.diagnostics {
+			log.Info("Delete link", "height", link.blockHeight, "preverified", link.preverified, "persisted", link.persisted)
+		}
 		delete(hd.links, link.hash)
 		if parentLink, ok := hd.links[link.header.ParentHash]; ok {
 			for i, n := range parentLink.next {

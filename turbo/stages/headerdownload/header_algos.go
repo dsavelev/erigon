@@ -615,6 +615,20 @@ func (hd *HeaderDownload) InsertHeaders(hf func(header *types.Header, hash commo
 			// Header should be preverified, but not yet, try again later
 			if hd.diagnostics {
 				log.Info("Header not yet preverified", "height", link.blockHeight, "insertList", len(hd.insertList))
+				var ls []*Link = link.next
+				var sb strings.Builder
+				for len(ls) > 0 {
+					last := ls[len(ls)-1]
+					sb.WriteString(fmt.Sprintf("[%d %t] ", last.blockHeight, last.preverified))
+					if sb.Len() >= 100 {
+						log.Info(sb.String())
+						sb.Reset()
+					}
+					ls = append(ls[:len(ls)-1], last.next...)
+				}
+				if sb.Len() > 0 {
+					log.Info(sb.String())
+				}
 			}
 			break
 		}

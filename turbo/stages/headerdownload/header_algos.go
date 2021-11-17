@@ -370,10 +370,8 @@ func (hd *HeaderDownload) newAnchor(segment *ChainSegment, start, end int, peerI
 		if prevLink == nil {
 			anchor.links = append(anchor.links, link)
 		} else {
-			for _, link := range anchor.links {
-				if link.blockHeight != prevLink.blockHeight+1 {
-					log.Error("misaligned next 6", "link.blockHeight", link.blockHeight, "prevLink.blockHeight", prevLink.blockHeight)
-				}
+			if link.blockHeight != prevLink.blockHeight+1 {
+				log.Error("misaligned next 6", "link.blockHeight", link.blockHeight, "prevLink.blockHeight", prevLink.blockHeight)
 			}
 			prevLink.next = append(prevLink.next, link)
 		}

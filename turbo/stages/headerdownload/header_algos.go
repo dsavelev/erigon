@@ -187,6 +187,7 @@ func (hd *HeaderDownload) extendUp(segment *ChainSegment, start, end int) error 
 		prevLink = link
 		if _, ok := hd.preverifiedHashes[link.hash]; ok {
 			hd.markPreverified(link)
+			log.Info("extendUp", "from", segment.Headers[end-1].Number.Uint64(), "to", segment.Headers[start].Number.Uint64(), "marking", link.header, "preverified", link.preverified)
 		}
 	}
 
@@ -245,6 +246,7 @@ func (hd *HeaderDownload) extendDown(segment *ChainSegment, start, end int) (boo
 			prevLink = link
 			if _, ok := hd.preverifiedHashes[link.hash]; ok {
 				hd.markPreverified(link)
+				log.Info("extendDown", "from", segment.Headers[end-1].Number.Uint64(), "to", segment.Headers[start].Number.Uint64(), "marking", link.header, "preverified", link.preverified)
 			}
 		}
 		for _, link := range anchor.links {
@@ -258,6 +260,7 @@ func (hd *HeaderDownload) extendDown(segment *ChainSegment, start, end int) (boo
 		if anchorPreverified {
 			// Mark the entire segment as preverified
 			hd.markPreverified(prevLink)
+			log.Info("extendUp (anchor)", "from", segment.Headers[end-1].Number.Uint64(), "to", segment.Headers[start].Number.Uint64(), "marking", prevLink.header, "preverified", prevLink.preverified)
 		}
 		return !preExisting, nil
 	}
@@ -303,6 +306,7 @@ func (hd *HeaderDownload) connect(segment *ChainSegment, start, end int) ([]Pena
 		prevLink = link
 		if _, ok := hd.preverifiedHashes[link.hash]; ok {
 			hd.markPreverified(link)
+			log.Info("connect", "from", segment.Headers[end-1].Number.Uint64(), "to", segment.Headers[start].Number.Uint64(), "marking", link.header, "preverified", link.preverified)
 		}
 	}
 	for _, link := range anchor.links {
@@ -316,6 +320,7 @@ func (hd *HeaderDownload) connect(segment *ChainSegment, start, end int) ([]Pena
 	if anchorPreverified {
 		// Mark the entire segment as preverified
 		hd.markPreverified(prevLink)
+		log.Info("connect (anchor)", "from", segment.Headers[end-1].Number.Uint64(), "to", segment.Headers[start].Number.Uint64(), "marking", prevLink.header, "preverified", prevLink.preverified)
 	}
 	var penalties []PenaltyItem
 	if _, bad := hd.badHeaders[attachmentLink.hash]; bad {
@@ -380,6 +385,7 @@ func (hd *HeaderDownload) newAnchor(segment *ChainSegment, start, end int, peerI
 		prevLink = link
 		if _, ok := hd.preverifiedHashes[link.hash]; ok {
 			hd.markPreverified(link)
+			log.Info("newAnchor", "from", segment.Headers[end-1].Number.Uint64(), "to", segment.Headers[start].Number.Uint64(), "marking", link.header, "preverified", link.preverified)
 		}
 	}
 	return !preExisting, nil

@@ -516,7 +516,8 @@ func (hd *HeaderDownload) RecoverFromDb(db kv.RoDB) error {
 			if err = rlp.DecodeBytes(v, &h); err != nil {
 				return err
 			}
-			hd.addHeaderAsLink(&h, true /* persisted */)
+			link := hd.addHeaderAsLink(&h, true /* persisted */)
+			log.Info("recovered persisted link", "height", link.blockHeight)
 
 			select {
 			case <-logEvery.C:

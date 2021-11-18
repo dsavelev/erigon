@@ -253,6 +253,7 @@ func (hd *HeaderDownload) extendDown(segment *ChainSegment, start, end int) (boo
 			}
 		}
 		prevLink.next = anchor.links
+		//prevLink.next = append([]*Link{}, anchor.links...)
 		anchor.links = nil
 		if anchorPreverified {
 			// Mark the entire segment as preverified
@@ -310,6 +311,7 @@ func (hd *HeaderDownload) connect(segment *ChainSegment, start, end int) ([]Pena
 		}
 	}
 	prevLink.next = anchor.links
+	//prevLink.next = append([]*Link{}, anchor.links...)
 	anchor.links = nil
 	if anchorPreverified {
 		// Mark the entire segment as preverified
@@ -640,7 +642,7 @@ func (hd *HeaderDownload) InsertHeaders(hf func(header *types.Header, hash commo
 				for i, n := range link.next {
 					log.Info("next", "i", i, "height", n.blockHeight, "preverified", n.preverified)
 				}
-				var ls []*Link = link.next
+				var ls []*Link = append([]*Link{}, link.next...)
 				var sb strings.Builder
 				for len(ls) > 0 {
 					last := ls[len(ls)-1]

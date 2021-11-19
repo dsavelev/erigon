@@ -645,7 +645,7 @@ func (hd *HeaderDownload) InsertHeaders(hf func(header *types.Header, hash commo
 		if link.blockHeight <= hd.preverifiedHeight && !link.preverified {
 			// Header should be preverified, but not yet, try again later
 			if hd.diagnostics {
-				log.Info("Header not yet preverified", "height", link.blockHeight, "insertList", len(hd.insertList))
+				log.Info("Header not yet preverified", "height", link.blockHeight, "pointer", fmt.Sprintf("%p", link), "insertList", len(hd.insertList))
 				for i, n := range link.next {
 					log.Info("next", "i", i, "height", n.blockHeight, "preverified", n.preverified)
 				}

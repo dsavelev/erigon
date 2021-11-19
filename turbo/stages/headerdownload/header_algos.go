@@ -260,7 +260,7 @@ func (hd *HeaderDownload) extendDown(segment *ChainSegment, start, end int) (boo
 		if anchorPreverified {
 			// Mark the entire segment as preverified
 			hd.markPreverified(prevLink)
-			log.Info("extendUp (anchor)", "from", segment.Headers[end-1].Number.Uint64(), "to", segment.Headers[start].Number.Uint64(), "marking", prevLink.blockHeight, "preverified", prevLink.preverified, "pointer", fmt.Sprintf("%p", prevLink))
+			log.Info("extendDown (anchor)", "from", segment.Headers[end-1].Number.Uint64(), "to", segment.Headers[start].Number.Uint64(), "marking", prevLink.blockHeight, "preverified", prevLink.preverified, "pointer", fmt.Sprintf("%p", prevLink))
 		}
 		return !preExisting, nil
 	}

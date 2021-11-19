@@ -194,6 +194,7 @@ func (hd *HeaderDownload) extendUp(segment *ChainSegment, start, end int) error 
 	if _, bad := hd.badHeaders[attachmentLink.hash]; !bad && attachmentLink.persisted {
 		link := hd.links[linkHeader.Hash()]
 		hd.insertList = append(hd.insertList, link)
+		log.Info("insertList extendUp", "height", link.blockHeight, "preverified", link.preverified, "pointer", fmt.Sprintf("%p", link))
 	}
 	return nil
 }
@@ -260,7 +261,7 @@ func (hd *HeaderDownload) extendDown(segment *ChainSegment, start, end int) (boo
 		if anchorPreverified {
 			// Mark the entire segment as preverified
 			hd.markPreverified(prevLink)
-			log.Info("extendUp (anchor)", "from", segment.Headers[end-1].Number.Uint64(), "to", segment.Headers[start].Number.Uint64(), "marking", prevLink.blockHeight, "preverified", prevLink.preverified, "pointer", fmt.Sprintf("%p", prevLink))
+			log.Info("extendDown (anchor)", "from", segment.Headers[end-1].Number.Uint64(), "to", segment.Headers[start].Number.Uint64(), "marking", prevLink.blockHeight, "preverified", prevLink.preverified, "pointer", fmt.Sprintf("%p", prevLink))
 		}
 		return !preExisting, nil
 	}
@@ -329,6 +330,7 @@ func (hd *HeaderDownload) connect(segment *ChainSegment, start, end int) ([]Pena
 	} else if attachmentLink.persisted {
 		link := hd.links[linkHeader.Hash()]
 		hd.insertList = append(hd.insertList, link)
+		log.Info("insertList connect", "height", link.blockHeight, "preverified", link.preverified, "pointer", fmt.Sprintf("%p", link))
 	}
 	return penalties, nil
 }

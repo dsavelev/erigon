@@ -3762,6 +3762,55 @@ func trimTxs(chaindata string) error {
 	return nil
 }
 
+func scanTxlookup(chaindata string) error {
+	db := mdbx.MustOpen(chaindata)
+	defer db.Close()
+	tx, err := db.BeginRo(context.Background())
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	c, err := tx.Cursor(kv.TxLookup)
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+	count := 0
+	for k, v, err := c.First(); k != nil; k, v, err = c.Next() {
+		if err != nil {
+			return err
+		}
+		txHash := common.BytesToHash(k)
+		number := new(big.Int).SetBytes(v).Uint64()
+		hash, err1 := rawdb.ReadCanonicalHash(tx, number)
+		if err1 != nil {
+			return err1
+		}
+		block, _, err2 := rawdb.ReadBlockWithSenders(tx, hash, number)
+		if err2 != nil {
+			return err2
+		}
+		if block == nil { // don't save nil's to cache
+			return fmt.Errorf("did not find block %d", number)
+		}
+		var found bool
+		for _, txn := range block.Transactions() {
+			if txn.Hash() == txHash {
+				found = true
+				break
+			}
+		}
+		if !found {
+			log.Error("tx not found in the block", "hash", txHash, "block", number)
+		}
+		count++
+		if count%1_000_000 == 0 {
+			log.Info("Processed", "txs", count)
+		}
+	}
+	return nil
+}
+
 func scanTxs(chaindata string) error {
 	db := mdbx.MustOpen(chaindata)
 	defer db.Close()
@@ -4252,6 +4301,8 @@ func main() {
 		err = genstate()
 	case "dumpTxs":
 		err = dumpTxs(*chaindata, uint64(*block), int(*blockTotal), *name)
+	case "scanTxlookup":
+		err = scanTxlookup(*chaindata)
 	}
 
 	if err != nil {
